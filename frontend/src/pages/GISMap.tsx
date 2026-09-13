@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, CircleMarker, Circle, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -141,7 +141,7 @@ export const RAIPUR_TRANSIT_CORRIDORS = [
 export function GISMap() {
   const { buses, events, trafficSegments, setBuses, setEvents, setTrafficSegments } = useStore();
   const [activeTab, setActiveTab] = useState<'map' | 'routes' | 'maintenance'>('map');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState('All');
   const [activeHeatmap, setActiveHeatmap] = useState<'none' | 'potholes' | 'traffic' | 'flood'>('potholes');
   const [showBuses, setShowBuses] = useState(true);
@@ -160,13 +160,14 @@ export function GISMap() {
         getTraffic(),
         getRouteAnalytics(),
       ]);
-      setBuses(fleet.buses);
-      setEvents(evts.events);
-      setTrafficSegments(traffic.segments);
+      if (fleet?.buses?.length) setBuses(fleet.buses);
+      if (evts?.events?.length) setEvents(evts.events);
+      if (traffic?.segments?.length) setTrafficSegments(traffic.segments);
       if (routesRes?.routes) setRouteAnalytics(routesRes.routes);
-      setLoading(false);
     } catch (e) {
       // quiet fallback
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -490,15 +491,27 @@ export function GISMap() {
 
                 {/* HEATMAP LAYER: Realistic Multi-Tier Potholes & Defect Clusters */}
                 {activeHeatmap === 'potholes' && potholeEvents.map((evt, idx) => (
-                  <span key={`heat-wrap-${evt.event_id || 'evt'}-${idx}`}>
+                  <React.Fragment key={`heat-wrap-${evt.event_id || 'evt'}-${idx}`}>
                     {/* Outer Radiant Heat Halo */}
                     <Circle
                       center={[evt.lat, evt.lng]}
-                      radius={140}
+                      radius={evt.severity === 'CRITICAL' ? 220 : 160}
                       pathOptions={{
-                        color: '#ef4444',
-                        fillColor: '#ef4444',
-                        fillOpacity: 0.14,
+                        color: '#f87171',
+                        fillColor: '#f87171',
+                        fillOpacity: 0.18,
+                        weight: 0,
+                        stroke: false,
+                      }}
+                    />
+                    {/* Mid Thermal Dispersion */}
+                    <Circle
+                      center={[evt.lat, evt.lng]}
+                      radius={evt.severity === 'CRITICAL' ? 120 : 85}
+                      pathOptions={{
+                        color: '#ea580c',
+                        fillColor: '#ea580c',
+                        fillOpacity: 0.35,
                         weight: 0,
                         stroke: false,
                       }}
@@ -506,72 +519,72 @@ export function GISMap() {
                     {/* Inner Core Hotspot */}
                     <Circle
                       center={[evt.lat, evt.lng]}
-                      radius={evt.severity === 'CRITICAL' ? 55 : 40}
+                      radius={evt.severity === 'CRITICAL' ? 50 : 35}
                       pathOptions={{
                         color: '#dc2626',
                         fillColor: '#dc2626',
-                        fillOpacity: 0.48,
+                        fillOpacity: 0.70,
                         weight: 0,
                         stroke: false,
                       }}
                     />
-                  </span>
+                  </React.Fragment>
                 ))}
 
                 {/* HEATMAP LAYER: Traffic Chokepoints */}
                 {activeHeatmap === 'traffic' && trafficSegments.map((seg) => (
-                  <span key={`traffic-heat-${seg.segment_id}`}>
+                  <React.Fragment key={`traffic-heat-${seg.segment_id}`}>
                     <Circle
                       center={[seg.lat, seg.lng]}
-                      radius={seg.is_bottleneck ? 220 : 140}
+                      radius={seg.is_bottleneck ? 240 : 150}
                       pathOptions={{
                         color: seg.density_level === 'CRITICAL' ? '#f87171' : '#fde047',
                         fillColor: seg.density_level === 'CRITICAL' ? '#f87171' : '#fde047',
-                        fillOpacity: 0.16,
+                        fillOpacity: 0.20,
                         weight: 0,
                         stroke: false,
                       }}
                     />
                     <Circle
                       center={[seg.lat, seg.lng]}
-                      radius={seg.is_bottleneck ? 75 : 50}
+                      radius={seg.is_bottleneck ? 100 : 65}
                       pathOptions={{
                         color: seg.density_level === 'CRITICAL' ? '#dc2626' : '#d97706',
                         fillColor: seg.density_level === 'CRITICAL' ? '#dc2626' : '#d97706',
-                        fillOpacity: 0.48,
+                        fillOpacity: 0.55,
                         weight: 0,
                         stroke: false,
                       }}
                     />
-                  </span>
+                  </React.Fragment>
                 ))}
 
                 {/* HEATMAP LAYER: Monsoon Flood Zones */}
                 {activeHeatmap === 'flood' && waterlogEvents.map((evt, idx) => (
-                  <span key={`flood-heat-${evt.event_id || 'flood'}-${idx}`}>
+                  <React.Fragment key={`flood-heat-${evt.event_id || 'flood'}-${idx}`}>
                     <Circle
                       center={[evt.lat, evt.lng]}
-                      radius={200}
+                      radius={220}
                       pathOptions={{
                         color: '#38bdf8',
                         fillColor: '#38bdf8',
-                        fillOpacity: 0.18,
+                        fillOpacity: 0.22,
                         weight: 0,
                         stroke: false,
                       }}
                     />
                     <Circle
                       center={[evt.lat, evt.lng]}
-                      radius={70}
+                      radius={85}
                       pathOptions={{
                         color: '#0284c7',
                         fillColor: '#0284c7',
-                        fillOpacity: 0.52,
+                        fillOpacity: 0.60,
                         weight: 0,
                         stroke: false,
                       }}
                     />
-                  </span>
+                  </React.Fragment>
                 ))}
 
                 {/* Bus Markers */}
