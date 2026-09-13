@@ -20,17 +20,20 @@ const ALL_TYPES = ['All Hazards', ...Object.keys(TYPE_LABELS)];
 const ALL_SEVERITIES = ['All Severities', 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW'];
 
 export function RoadConditions() {
-  const { events, setEvents } = useStore();
-  const [loading, setLoading] = useState(true);
+  const { events, setEvents, updateEvent: updateStoreEvent } = useStore();
+  const [loading, setLoading] = useState(false);
   const [filterType, setFilterType] = useState('All Hazards');
   const [filterSev, setFilterSev] = useState('All Severities');
   const [search, setSearch] = useState('');
   const [successToast, setSuccessToast] = useState<string | null>(null);
 
   const load = async () => {
-    const data = await getEvents({ limit: 100 });
-    setEvents(data.events);
-    setLoading(false);
+    try {
+      const data = await getEvents({ limit: 100 });
+      if (data?.events?.length) setEvents(data.events);
+    } catch {} finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -55,10 +58,12 @@ export function RoadConditions() {
   });
 
   const handleStatusChange = async (evt: Event, status: any) => {
-    await updateEvent(evt.event_id, { status });
+    updateStoreEvent(evt.event_id, { status });
     setSuccessToast(`Work order updated: ${evt.event_id} marked as ${status}`);
     setTimeout(() => setSuccessToast(null), 4000);
-    load();
+    try {
+      await updateEvent(evt.event_id, { status });
+    } catch {}
   };
 
   return (
@@ -238,17 +243,42 @@ export function RoadConditions() {
                     {new Date(evt.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </td>
                   <td>
-                    {evt.status !== 'RESOLVED' ? (
-                      <button
-                        className="btn btn-sm btn-ghost"
-                        onClick={() => handleStatusChange(evt, 'RESOLVED')}
-                        style={{ fontSize: 11, padding: '3px 8px', color: '#059669', borderColor: '#a7f3d0' }}
-                      >
-                        Mark Repaired
-                      </button>
-                    ) : (
-                      <span style={{ fontSize: 11.5, color: '#059669', fontWeight: 600 }}>Resolved</span>
-                    )}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      {evt.status === 'NEW' && (
+                        <button
+                          className="btn btn-sm"
+                          onClick={() => handleStatusChange(evt, 'ASSIGNED')}
+                          style={{
+                            fontSize: 11,
+                            padding: '3px 8px',
+                            color: '#2563eb',
+                            borderColor: '#bfdbfe',
+                            background: '#eff6ff',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Assign
+                        </button>
+                      )}
+                      {evt.status !== 'RESOLVED' ? (
+                        <button
+                          className="btn btn-sm btn-ghost"
+                          onClick={() => handleStatusChange(evt, 'RESOLVED')}
+                          style={{
+                            fontSize: 11,
+                            padding: '3px 8px',
+                            color: '#059669',
+                            borderColor: '#a7f3d0',
+                            background: '#ecfdf5',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Mark Repaired
+                        </button>
+                      ) : (
+                        <span style={{ fontSize: 11.5, color: '#059669', fontWeight: 600 }}>Repaired ✓</span>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}

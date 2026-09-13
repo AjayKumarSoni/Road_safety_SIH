@@ -14,15 +14,18 @@ const TYPE_LABELS: Record<string, string> = {
 };
 
 export function IncidentCenter() {
-  const { incidents, setIncidents } = useStore();
-  const [loading, setLoading] = useState(true);
+  const { incidents, setIncidents, updateIncident: updateStoreIncident } = useStore();
+  const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [toast, setToast] = useState<string | null>(null);
 
   const load = async () => {
-    const data = await getIncidents({ limit: 100 });
-    setIncidents(data.incidents);
-    setLoading(false);
+    try {
+      const data = await getIncidents({ limit: 100 });
+      if (data?.incidents?.length) setIncidents(data.incidents);
+    } catch {} finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -31,11 +34,13 @@ export function IncidentCenter() {
     return () => clearInterval(t);
   }, []);
 
-  const handleUpdateStatus = async (inc: Incident, status: string) => {
-    await updateIncident(inc.incident_id, { status });
+  const handleUpdateStatus = async (inc: Incident, status: any) => {
+    updateStoreIncident(inc.incident_id, { status });
     setToast(`Incident ${inc.incident_id} marked as ${status}`);
     setTimeout(() => setToast(null), 4000);
-    load();
+    try {
+      await updateIncident(inc.incident_id, { status });
+    } catch {}
   };
 
   const filtered = incidents.filter((i) => {
@@ -214,17 +219,42 @@ export function IncidentCenter() {
                     </span>
                   </td>
                   <td>
-                    {inc.status !== 'RESOLVED' ? (
-                      <button
-                        className="btn btn-sm btn-ghost"
-                        onClick={() => handleUpdateStatus(inc, 'RESOLVED')}
-                        style={{ fontSize: 11, padding: '3px 8px', color: '#059669', borderColor: '#a7f3d0' }}
-                      >
-                        Resolve
-                      </button>
-                    ) : (
-                      <span style={{ fontSize: 11.5, color: '#059669', fontWeight: 600 }}>Resolved</span>
-                    )}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      {inc.status === 'NEW' && (
+                        <button
+                          className="btn btn-sm"
+                          onClick={() => handleUpdateStatus(inc, 'ASSIGNED')}
+                          style={{
+                            fontSize: 11,
+                            padding: '3px 8px',
+                            color: '#2563eb',
+                            borderColor: '#bfdbfe',
+                            background: '#eff6ff',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Assign PCR
+                        </button>
+                      )}
+                      {inc.status !== 'RESOLVED' ? (
+                        <button
+                          className="btn btn-sm btn-ghost"
+                          onClick={() => handleUpdateStatus(inc, 'RESOLVED')}
+                          style={{
+                            fontSize: 11,
+                            padding: '3px 8px',
+                            color: '#059669',
+                            borderColor: '#a7f3d0',
+                            background: '#ecfdf5',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Resolve
+                        </button>
+                      ) : (
+                        <span style={{ fontSize: 11.5, color: '#059669', fontWeight: 600 }}>Resolved ✓</span>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}

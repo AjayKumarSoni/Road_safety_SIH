@@ -4,6 +4,7 @@ import {
   ShieldAlert, FileText
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
+import logoImg from '../assets/logo.png';
 
 const NAV = [
   { to: '/', icon: LayoutDashboard, label: 'Command Center' },
@@ -35,7 +36,7 @@ export function Sidebar() {
       <div style={{ padding: '18px 20px 14px', borderBottom: '1px solid #f1f5f9' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
           <img
-            src="/favicon.svg"
+            src={logoImg}
             alt="RakshAI Logo"
             style={{
               width: 36,
@@ -44,6 +45,7 @@ export function Sidebar() {
               padding: 2,
               background: '#eff6ff',
               border: '1px solid #bfdbfe',
+              objectFit: 'contain',
               flexShrink: 0,
             }}
           />

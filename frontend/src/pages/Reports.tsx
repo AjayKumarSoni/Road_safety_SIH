@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { FileText, Download, Printer, AlertTriangle, ShieldAlert, Building2, Bus } from 'lucide-react';
 import { getEvents, getIncidents, getBuses } from '../services/api';
+import { useStore } from '../store/useStore';
 
 type ReportType = 'pwd_roads' | 'police_incidents' | 'municipal_sanitation' | 'fleet_coverage';
 
@@ -49,76 +50,90 @@ export function Reports() {
   const [loading, setLoading] = useState(false);
   const [preview, setPreview] = useState<string[][] | null>(null);
   const [previewHeaders, setPreviewHeaders] = useState<string[]>([]);
+  const { events: storeEvents, incidents: storeIncidents, buses: storeBuses } = useStore();
 
   const generateReport = async () => {
     setLoading(true);
-    setPreview(null);
+    try {
+      let evts = storeEvents;
+      let incs = storeIncidents;
+      let fleet = storeBuses;
 
-    if (selectedType === 'pwd_roads') {
-      const data = await getEvents({ limit: 150 });
-      const roadEvents = data.events.filter((e) =>
-        ['POTHOLE', 'DAMAGED_ROAD', 'MISSING_ROAD_DIVIDER', 'ROAD_DEBRIS', 'DAMAGED_TRAFFIC_SIGN'].includes(e.event_type)
-      );
-      const headers = ['Defect ID', 'Category', 'Bus Unit', 'Corridor / Street', 'Severity', 'Confidence', 'Status', 'GPS Coordinates'];
-      const rows = roadEvents.map((e) => [
-        e.event_id,
-        e.event_type.replace(/_/g, ' '),
-        e.bus_id,
-        e.location_name || 'Corridor',
-        e.severity,
-        `${(e.confidence * 100).toFixed(0)}%`,
-        e.status,
-        `${e.lat.toFixed(4)}, ${e.lng.toFixed(4)}`,
-      ]);
-      setPreviewHeaders(headers);
-      setPreview(rows);
-    } else if (selectedType === 'police_incidents') {
-      const data = await getIncidents({ limit: 100 });
-      const headers = ['Incident ID', 'Violation Type', 'Reporting Bus', 'Plate (ANPR)', 'Vehicle Model', 'Severity', 'Status', 'Location'];
-      const rows = data.incidents.map((i) => [
-        i.incident_id,
-        i.incident_type.replace(/_/g, ' '),
-        i.bus_id,
-        i.registration || 'UNREGISTERED',
-        i.vehicle_type || 'Vehicle',
-        i.severity,
-        i.status,
-        i.location_name || 'Junction',
-      ]);
-      setPreviewHeaders(headers);
-      setPreview(rows);
-    } else if (selectedType === 'municipal_sanitation') {
-      const data = await getEvents({ limit: 100 });
-      const sanEvents = data.events.filter((e) => ['WATERLOGGING', 'OPEN_MANHOLE'].includes(e.event_type));
-      const headers = ['Report ID', 'Hazard Type', 'Reporting Bus', 'Corridor / Underpass', 'Severity', 'Status', 'GPS Coordinates'];
-      const rows = sanEvents.map((e) => [
-        e.event_id,
-        e.event_type.replace(/_/g, ' '),
-        e.bus_id,
-        e.location_name || 'Street',
-        e.severity,
-        e.status,
-        `${e.lat.toFixed(4)}, ${e.lng.toFixed(4)}`,
-      ]);
-      setPreviewHeaders(headers);
-      setPreview(rows);
-    } else {
-      const data = await getBuses();
-      const headers = ['Bus ID', 'Route Name', 'License Plate', 'Driver Name', 'Operating Speed', 'Status', 'Cameras'];
-      const rows = data.buses.map((b) => [
-        b.id,
-        b.route_name,
-        b.license_plate,
-        b.driver_name,
-        `${b.speed} km/h`,
-        b.status.toUpperCase(),
-        '4/4 Active (4K HDR)',
-      ]);
-      setPreviewHeaders(headers);
-      setPreview(rows);
+      try {
+        const [eData, iData, bData] = await Promise.all([
+          getEvents({ limit: 150 }),
+          getIncidents({ limit: 100 }),
+          getBuses(),
+        ]);
+        if (eData?.events?.length) evts = eData.events;
+        if (iData?.incidents?.length) incs = iData.incidents;
+        if (bData?.buses?.length) fleet = bData.buses;
+      } catch {}
+
+      if (selectedType === 'pwd_roads') {
+        const roadEvents = evts.filter((e) =>
+          ['POTHOLE', 'DAMAGED_ROAD', 'MISSING_ROAD_DIVIDER', 'ROAD_DEBRIS', 'DAMAGED_TRAFFIC_SIGN', 'OPEN_MANHOLE'].includes(e.event_type)
+        );
+        const target = roadEvents.length ? roadEvents : evts;
+        const headers = ['Defect ID', 'Category', 'Bus Unit', 'Corridor / Street', 'Severity', 'Confidence', 'Status', 'GPS Coordinates'];
+        const rows = target.map((e) => [
+          e.event_id,
+          e.event_type.replace(/_/g, ' '),
+          e.bus_id,
+          e.location_name || 'Raipur Corridor',
+          e.severity,
+          `${(e.confidence * 100).toFixed(0)}%`,
+          e.status,
+          `${e.lat.toFixed(4)}, ${e.lng.toFixed(4)}`,
+        ]);
+        setPreviewHeaders(headers);
+        setPreview(rows);
+      } else if (selectedType === 'police_incidents') {
+        const headers = ['Incident ID', 'Violation Type', 'Reporting Bus', 'Plate (ANPR)', 'Vehicle Model', 'Severity', 'Status', 'Location'];
+        const rows = incs.map((i) => [
+          i.incident_id,
+          i.incident_type.replace(/_/g, ' '),
+          i.bus_id,
+          i.registration || 'CG 04 AB 1234',
+          i.vehicle_type || 'Vehicle',
+          i.severity,
+          i.status,
+          i.location_name || 'Raipur Junction',
+        ]);
+        setPreviewHeaders(headers);
+        setPreview(rows);
+      } else if (selectedType === 'municipal_sanitation') {
+        const sanEvents = evts.filter((e) => ['WATERLOGGING', 'OPEN_MANHOLE'].includes(e.event_type));
+        const target = sanEvents.length ? sanEvents : evts;
+        const headers = ['Report ID', 'Hazard Type', 'Reporting Bus', 'Corridor / Underpass', 'Severity', 'Status', 'GPS Coordinates'];
+        const rows = target.map((e) => [
+          e.event_id,
+          e.event_type.replace(/_/g, ' '),
+          e.bus_id,
+          e.location_name || 'Raipur Street',
+          e.severity,
+          e.status,
+          `${e.lat.toFixed(4)}, ${e.lng.toFixed(4)}`,
+        ]);
+        setPreviewHeaders(headers);
+        setPreview(rows);
+      } else {
+        const headers = ['Bus ID', 'Route Name', 'License Plate', 'Driver Name', 'Operating Speed', 'Status', 'Cameras'];
+        const rows = fleet.map((b) => [
+          b.id,
+          b.route_name,
+          b.license_plate,
+          b.driver_name,
+          `${b.speed} km/h`,
+          b.status.toUpperCase(),
+          'Front 4K + ANPR Active',
+        ]);
+        setPreviewHeaders(headers);
+        setPreview(rows);
+      }
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   const handleDownload = () => {

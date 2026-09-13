@@ -44,6 +44,8 @@ interface AppState {
   setSelectedEvent: (id: string | null) => void;
   setSelectedIncident: (id: string | null) => void;
   incrementAlerts: () => void;
+  clearAlerts: () => void;
+  setAlertCount: (count: number) => void;
   setWsConnected: (connected: boolean) => void;
   handleWsMessage: (msg: WsMessage) => void;
 }
@@ -203,6 +205,8 @@ export const useStore = create<AppState>((set, get) => ({
   setSelectedEvent: (selectedEventId) => set({ selectedEventId }),
   setSelectedIncident: (selectedIncidentId) => set({ selectedIncidentId }),
   incrementAlerts: () => set((state) => ({ alertCount: state.alertCount + 1 })),
+  clearAlerts: () => set({ alertCount: 0 }),
+  setAlertCount: (alertCount) => set({ alertCount }),
   setWsConnected: (wsConnected) => set({ wsConnected }),
 
   handleWsMessage: (msg: WsMessage) => {

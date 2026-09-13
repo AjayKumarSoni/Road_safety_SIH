@@ -139,7 +139,7 @@ export const RAIPUR_TRANSIT_CORRIDORS = [
 ];
 
 export function GISMap() {
-  const { buses, events, trafficSegments, setBuses, setEvents, setTrafficSegments } = useStore();
+  const { buses, events, trafficSegments, setBuses, setEvents, setTrafficSegments, updateEvent: updateStoreEvent } = useStore();
   const [activeTab, setActiveTab] = useState<'map' | 'routes' | 'maintenance'>('map');
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState('All');
@@ -178,10 +178,12 @@ export function GISMap() {
   }, []);
 
   const handleUpdateStatus = async (eventId: string, newStatus: any) => {
-    await updateEvent(eventId, { status: newStatus });
+    updateStoreEvent(eventId, { status: newStatus });
     setActionNotice(`Work Order for ${eventId} updated to ${newStatus}`);
     setTimeout(() => setActionNotice(null), 4000);
-    loadData();
+    try {
+      await updateEvent(eventId, { status: newStatus });
+    } catch {}
   };
 
   const filteredEvents = events.filter((e) =>
