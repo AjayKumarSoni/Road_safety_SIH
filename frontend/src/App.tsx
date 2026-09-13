@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { HashRouter, Routes, Route } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { CommandCenter } from './pages/CommandCenter';
 import { LiveFleet } from './pages/LiveFleet';
@@ -38,9 +38,9 @@ function AppInner() {
 
 function App() {
   return (
-    <BrowserRouter>
+    <HashRouter>
       <AppInner />
-    </BrowserRouter>
+    </HashRouter>
   );
 }
 
